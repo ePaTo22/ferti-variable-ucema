@@ -1,0 +1,29 @@
+{
+  "name": "ucema-ferti",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@turf/area": "^7.2.0",
+    "@turf/boolean-valid": "^7.2.0",
+    "@turf/helpers": "^7.2.0",
+    "idb": "^8.0.3",
+    "next": "^16.4.0",
+    "ol": "^10.6.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}
