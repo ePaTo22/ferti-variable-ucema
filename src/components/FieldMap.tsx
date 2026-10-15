@@ -14,28 +14,43 @@ import Draw from 'ol/interaction/Draw';
 import Modify from 'ol/interaction/Modify';
 import GeoJSON from 'ol/format/GeoJSON';
 import Polygon from 'ol/geom/Polygon';
+import Point from 'ol/geom/Point';
+import OlFeature from 'ol/Feature';
+import CircleStyle from 'ol/style/Circle';
+import type MapBrowserEvent from 'ol/MapBrowserEvent';
 import { Fill, Stroke, Style } from 'ol/style';
-import { fromLonLat, transformExtent } from 'ol/proj';
+import { fromLonLat, toLonLat, transformExtent } from 'ol/proj';
 import area from '@turf/area';
-import type { Geometry, Analysis } from '@/lib/model';
+import type { Geometry, Analysis, SoilPin } from '@/lib/model';
 import { colors } from '@/lib/model';
 
-type Props = { geometry: Geometry | null; analysis: Analysis | null; mode: 'draw' | 'edit' | 'view'; layer: 'image' | 'zones' | 'values'; onGeometry: (g: Geometry) => void };
-export default function FieldMap({ geometry, analysis, mode, layer, onGeometry }: Props) {
+type Props = {
+  geometry: Geometry | null; analysis: Analysis | null; mode: 'draw' | 'edit' | 'view' | 'pin';
+  layer: 'image' | 'zones' | 'values'; pins: SoilPin[];
+  onGeometry: (g: Geometry) => void; onAddPin: (lon: number, lat: number) => void; onRemovePin: (id: string) => void;
+};
+export default function FieldMap({ geometry, analysis, mode, layer, pins, onGeometry, onAddPin, onRemovePin }: Props) {
   const element = useRef<HTMLDivElement>(null);
   const map = useRef<Map | null>(null);
   const fieldSource = useRef(new VectorSource());
   const zoneSource = useRef(new VectorSource());
   const valueSource = useRef(new VectorSource());
+  const pinSource = useRef(new VectorSource());
   const zoneLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const valueLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
+  const pinLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const imageLayerRef = useRef<ImageLayer<ImageSource> | null>(null);
   const areaOverlay = useRef<Overlay | null>(null);
   const areaLabel = useRef<HTMLDivElement | null>(null);
   const draw = useRef<Draw | null>(null);
   const modify = useRef<Modify | null>(null);
+  const pinClick = useRef<((event: MapBrowserEvent) => void) | null>(null);
   const callback = useRef(onGeometry);
   callback.current = onGeometry;
+  const addPinCallback = useRef(onAddPin);
+  addPinCallback.current = onAddPin;
+  const removePinCallback = useRef(onRemovePin);
+  removePinCallback.current = onRemovePin;
 
   useEffect(() => {
     if (!element.current) return;
@@ -52,10 +67,14 @@ export default function FieldMap({ geometry, analysis, mode, layer, onGeometry }
       return new Style({ fill: new Fill({ color: `hsla(${hue},68%,49%,.77)` }), stroke: new Stroke({ color: `hsla(${hue},60%,35%,.3)`, width: .3 }) });
     } });
     const imageLayer = new ImageLayer({ opacity: .82 });
-    zoneLayerRef.current = zoneLayer; valueLayerRef.current = valueLayer; imageLayerRef.current = imageLayer;
+    const pinLayer = new VectorLayer({ source: pinSource.current, style: feature => {
+      const c = Number(feature.get('class'));
+      return new Style({ image: new CircleStyle({ radius: 8, fill: new Fill({ color: colors[c] ?? '#777' }), stroke: new Stroke({ color: '#fff', width: 2 }) }) });
+    } });
+    zoneLayerRef.current = zoneLayer; valueLayerRef.current = valueLayer; imageLayerRef.current = imageLayer; pinLayerRef.current = pinLayer;
     const m = new Map({ target: element.current, layers: [
       new TileLayer({ source: new XYZ({ url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attributions: 'Imágenes © Esri, Maxar, Earthstar Geographics y GIS User Community', maxZoom: 19 }) }),
-      imageLayer, valueLayer, zoneLayer, fieldLayer
+      imageLayer, valueLayer, zoneLayer, fieldLayer, pinLayer
     ], view: new View({ center: fromLonLat([-63.5, -33]), zoom: 5, maxZoom: 20 }) });
     const label = document.createElement('div');
     label.className = 'field-area-label';
@@ -76,6 +95,7 @@ export default function FieldMap({ geometry, analysis, mode, layer, onGeometry }
     if (!m) return;
     if (draw.current) { m.removeInteraction(draw.current); draw.current = null; }
     if (modify.current) { m.removeInteraction(modify.current); modify.current = null; }
+    if (pinClick.current) { m.un('click', pinClick.current); pinClick.current = null; }
     const source = fieldSource.current;
     if (mode === 'draw') {
       const interaction = new Draw({ source, type: 'Polygon' });
@@ -92,8 +112,27 @@ export default function FieldMap({ geometry, analysis, mode, layer, onGeometry }
         if (feature) callback.current(new GeoJSON().writeFeatureObject(feature, { featureProjection: 'EPSG:3857', dataProjection: 'EPSG:4326' }).geometry as Geometry);
       });
       m.addInteraction(interaction); modify.current = interaction;
+    } else if (mode === 'pin') {
+      const handler = (event: MapBrowserEvent) => {
+        const hit = m.forEachFeatureAtPixel(event.pixel, feature => feature, { layerFilter: l => l === pinLayerRef.current, hitTolerance: 6 });
+        if (hit) { removePinCallback.current(hit.get('id') as string); return; }
+        const [lon, lat] = toLonLat(event.coordinate);
+        addPinCallback.current(lon, lat);
+      };
+      m.on('click', handler); pinClick.current = handler;
     }
   }, [mode]);
+
+  useEffect(() => {
+    const source = pinSource.current;
+    source.clear();
+    const features = pins.map(p => {
+      const feature = new OlFeature({ geometry: new Point(fromLonLat([p.lon, p.lat])) });
+      feature.set('class', p.class); feature.set('id', p.id);
+      return feature;
+    });
+    source.addFeatures(features);
+  }, [pins]);
 
   useEffect(() => {
     const source = fieldSource.current;
