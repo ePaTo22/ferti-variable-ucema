@@ -31,6 +31,7 @@ Abrir `http://127.0.0.1:3000`. Para otro host del servicio geoespacial, configur
 3. Generar ambientes. El procesador recorta al lote, trabaja sobre una grilla de 20 m y separa los valores válidos por terciles. Los píxeles sin datos quedan sin dosis. En Sentinel-2 calcula `(B08-B04)/(B08+B04)`, acepta clases SCL de vegetación y suelo desnudo, y genera una previsualización RGB de la imagen usada sobre el lote.
 4. Indicar fertilizante, porcentaje de N y dosis base en kg de producto/ha. Elegir la dirección del ajuste. Las dosis propuestas son 80 %, 100 % y 120 % de la base, editables.
 5. Confirmar las dosis y exportar GeoJSON de polígonos con dosis, CSV de celdas válidas o imprimir el mapa en PDF.
+6. Con los ambientes generados, activar "Marcar pines" y hacer clic en el mapa para ubicar puntos de muestreo; cada pin toma el ambiente (bajo/medio/alto) del punto donde cae. Al reunir 4 pines en un mismo ambiente, "Cargar muestra" abre una hoja para registrar el análisis de suelo de esa muestra compuesta (profundidad, laboratorio, pH, materia orgánica, N, P, K, observaciones). Las muestras guardadas quedan en un historial por lote, ordenado por fecha de muestreo, para trazar la evolución del suelo entre campañas.
 
 La aplicación guarda los proyectos y archivos en IndexedDB del navegador. Si se borran los datos del sitio o se usa otro dispositivo, no se recuperan. Para la siguiente etapa, el tipo `Project` y los resultados `Analysis` permiten separar proyectos, archivos y análisis en PostgreSQL/PostGIS y Supabase Storage.
 
@@ -43,7 +44,7 @@ npm run build
 PYTHONPATH=worker .venv/bin/python -m unittest worker.test_app -v
 ```
 
-Las pruebas del servicio cubren límite de área, CSV, GeoTIFF con reproyección y rechazo de TIFF sin CRS. Las de TypeScript cubren inversión de dosis y exportaciones. Para comprobar en QGIS, abrir el GeoJSON exportado y comparar superficie y ubicación con el lote original; abrir el CSV como puntos WGS84 y verificar que quedan dentro del polígono.
+Las pruebas del servicio cubren límite de área, CSV, GeoTIFF con reproyección y rechazo de TIFF sin CRS. Las de TypeScript cubren inversión de dosis, exportaciones y la asignación de pines a un ambiente. Para comprobar en QGIS, abrir el GeoJSON exportado y comparar superficie y ubicación con el lote original; abrir el CSV como puntos WGS84 y verificar que quedan dentro del polígono.
 
 ## Límites de la demo
 
