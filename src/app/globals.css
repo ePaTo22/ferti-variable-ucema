@@ -27,6 +27,11 @@ button:disabled { opacity: .48; cursor: not-allowed; }
 .param-row { display: grid; grid-template-columns: minmax(0,1.4fr) minmax(0,.8fr) 64px 24px; gap: 6px; align-items: center; margin-top: 8px; }
 .param-row input, .param-row select { margin-top: 0; }
 .field-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.static-field { display: block; min-height: 36px; margin-top: 6px; padding: 9px 0; color: #183c2e; font-size: 13px; }
+.crop-picker { display: flex; overflow: hidden; min-height: 36px; margin-top: 6px; border: 1px solid #d8e1d8; border-radius: 7px; }
+.crop-picker button { flex: 1; border: 0; background: #fff; color: #526d54; font-size: 12px; font-weight: 700; }
+.crop-picker button + button { border-left: 1px solid #d8e1d8; }
+.crop-picker button.selected { background: #315f3d; color: #fff; }
 .actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
 .button { border: 1px solid transparent; border-radius: 8px; min-height: 36px; padding: 8px 12px; font-size: 12px; font-weight: 700; }
 .button.primary, .button.active { background: #315f3d; color: white; }

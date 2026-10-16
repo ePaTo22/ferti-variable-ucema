@@ -116,6 +116,17 @@ export default function Workbench() {
     if (!project) return;
     update({ direction: value, doses: proposedDoses(project.baseDose, value) }, true);
   }
+  function renameProject(name: string) {
+    if (!project) return;
+    update({ name });
+    setProjects(items => items.map(item => item.id === project.id ? { ...item, name } : item));
+  }
+  function createProject() {
+    const next = newProject();
+    setProject(next);
+    setProjects(items => [next, ...items]);
+    setScenes([]); setFile(null); setMode('view'); setError(''); setMessage('');
+  }
   async function selectFile(selected: File | null) {
     if (!project || !selected) return;
     if (selected.size > 25 * 1024 * 1024) { setError('El archivo supera 25 MB.'); return; }
@@ -201,10 +212,10 @@ export default function Workbench() {
     <main className="workspace">
       <aside className="sidebar">
         <section className="panel"><div className="eyebrow">Proyecto</div>
-          <label>Nombre del lote<input value={project.name} onChange={e => update({ name: e.target.value })} /></label>
-          <div className="field-row"><label>Cultivo<select value={project.crop} onChange={e => update({ crop: e.target.value as Project['crop'] }, true)}><option>Maíz</option><option>Trigo</option></select></label><label>Superficie<span className="static-field" style={fieldHectares && fieldHectares > 50 ? { color: '#ad4035', fontWeight: 800 } : undefined}>{fieldHectares !== null ? `${num(fieldHectares, 2)} ha` : 'Sin lote'}</span></label></div>
-          <div className="actions"><button className="button subtle" onClick={() => { setProject(newProject()); setScenes([]); setFile(null); setMode('view'); }}>Nuevo proyecto</button><button className="button text-danger" onClick={removeCurrent}>Eliminar</button></div>
-          {projects.length > 1 && <label>Proyectos guardados<select value={project.id} onChange={e => { setProject(projects.find(p => p.id === e.target.value) ?? project); setScenes([]); }}>
+          <label>Nombre del lote<input value={project.name} onChange={e => renameProject(e.target.value)} /></label>
+          <div className="field-row"><label>Cultivo<div className="crop-picker"><button type="button" className={project.crop === 'Maíz' ? 'selected' : ''} aria-pressed={project.crop === 'Maíz'} onClick={() => update({ crop: 'Maíz' }, true)}>Maíz</button><button type="button" className={project.crop === 'Trigo' ? 'selected' : ''} aria-pressed={project.crop === 'Trigo'} onClick={() => update({ crop: 'Trigo' }, true)}>Trigo</button></div></label><label>Superficie <span className="static-field" style={fieldHectares && fieldHectares > 50 ? { color: '#ad4035', fontWeight: 800 } : undefined}>{fieldHectares !== null ? `${num(fieldHectares, 2)} ha` : 'Sin lote'}</span></label></div>
+          <div className="actions"><button className="button subtle" onClick={createProject}>Nuevo proyecto</button><button className="button text-danger" onClick={removeCurrent}>Eliminar</button></div>
+          {projects.length > 1 && <label>Proyectos guardados<select value={project.id} onChange={e => { setProject(normalizeProject(projects.find(p => p.id === e.target.value) ?? project)); setScenes([]); }}>
             {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select></label>}
         </section>
@@ -247,7 +258,7 @@ export default function Workbench() {
           {project.analysis && <div className="map-toggle"><span>Ver capa</span>{project.analysis.preview && <button className={mapLayer === 'image' ? 'selected' : ''} onClick={() => setMapLayer('image')}>Imagen</button>}<button className={mapLayer === 'values' ? 'selected' : ''} onClick={() => setMapLayer('values')}>Valores de origen</button><button className={mapLayer === 'zones' ? 'selected' : ''} onClick={() => setMapLayer('zones')}>Ambientes</button></div>}
         </div>
         {busy && <div className="notice">{busy}</div>}{error && <div className="notice error" role="alert">{error}</div>}{message && <div className="notice success">{message}</div>}
-        <div className="results-head"><div><div className="eyebrow">Prescripción</div><h2>Tres ambientes, una decisión revisable</h2></div>{project.analysis && <span className="source-tag">{project.analysis.source === 'satellite' ? 'NDVI Sentinel-2' : 'Mapa de rendimiento'}</span>}</div>
+        <div className="results-head"><div><div className="eyebrow">Prescripción</div><h2>Tres ambientes</h2></div>{project.analysis && <span className="source-tag">{project.analysis.source === 'satellite' ? 'NDVI Sentinel-2' : 'Mapa de rendimiento'}</span>}</div>
         {project.analysis ? <><div className="zone-grid">{classNames.map((name, i) => <article className="zone-card" key={name} style={{ borderTopColor: colors[i] }}><div className="zone-header"><span className="zone-dot" style={{ background: colors[i] }} /><h3>{name}</h3><strong>{num(project.analysis!.classAreaHa[i], 2)} ha</strong></div>
           <label>Dosis · kg producto/ha<input type="number" min="0" step="0.1" value={project.doses[i]} onChange={e => update({ doses: project.doses.map((d, j) => j === i ? Number(e.target.value) : d) }, true)} /></label>
           <div className="zone-total"><span>Producto total</span><strong>{num(summaries[i].productKg, 1)} kg</strong></div><div className="zone-total"><span>N aportado</span><strong>{num(summaries[i].nitrogenKg, 1)} kg</strong></div>
