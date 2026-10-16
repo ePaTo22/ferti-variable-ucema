@@ -3,10 +3,14 @@ export const runtime = 'nodejs';
 export const maxDuration = 120;
 export async function POST(req: NextRequest) {
   try {
-    const form = await req.formData();
-    const file = form.get('file');
-    if (file instanceof File && file.size > 25 * 1024 * 1024) return NextResponse.json({ detail: 'El archivo supera 25 MB.' }, { status: 413 });
-    const response = await fetch(`${process.env.WORKER_URL ?? 'http://127.0.0.1:8001'}/process`, { method: 'POST', body: form, cache: 'no-store' });
+    const contentType = req.headers.get('content-type');
+    if (!contentType?.startsWith('multipart/form-data')) return NextResponse.json({ detail: 'Se esperaba un formulario multipart.' }, { status: 415 });
+    const response = await fetch(`${process.env.WORKER_URL ?? 'http://127.0.0.1:8001'}/process`, {
+      method: 'POST', body: req.body, headers: { 'Content-Type': contentType }, cache: 'no-store',
+      // Node.js requires this when forwarding a request body stream.
+      // @ts-expect-error -- `duplex` is available in Node's fetch implementation.
+      duplex: 'half',
+    });
     const text = await response.text();
     let payload: unknown;
     try { payload = JSON.parse(text); }
