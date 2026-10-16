@@ -3,11 +3,20 @@
   "services": {
     "app": {
       "root": ".",
-      "framework": "nextjs"
+      "framework": "nextjs",
+      "bindings": [
+        {
+          "type": "service",
+          "service": "worker",
+          "format": "url",
+          "env": "WORKER_URL"
+        }
+      ]
     },
     "worker": {
       "root": "worker",
-      "framework": "fastapi"
+      "framework": "fastapi",
+      "entrypoint": "app:app"
     }
   },
   "rewrites": [
