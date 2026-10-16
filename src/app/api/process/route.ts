@@ -5,11 +5,15 @@ export async function POST(req: NextRequest) {
   try {
     const contentType = req.headers.get('content-type');
     if (!contentType?.startsWith('multipart/form-data')) return NextResponse.json({ detail: 'Se esperaba un formulario multipart.' }, { status: 415 });
+    // Service bindings do not reliably accept a streamed request body. The app
+    // permits uploads up to 25 MB, so buffering the original bytes preserves
+    // the browser's multipart boundary without exceeding this route's limits.
+    const body = await req.arrayBuffer();
     const response = await fetch(`${process.env.WORKER_URL ?? 'http://127.0.0.1:8001'}/process`, {
-      method: 'POST', body: req.body, headers: { 'Content-Type': contentType }, cache: 'no-store',
-      // Node.js requires this when forwarding a request body stream.
-      // @ts-expect-error -- `duplex` is available in Node's fetch implementation.
-      duplex: 'half',
+      method: 'POST',
+      body,
+      headers: { 'Content-Type': contentType },
+      cache: 'no-store',
     });
     const text = await response.text();
     let payload: unknown;
